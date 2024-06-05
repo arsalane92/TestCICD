@@ -23,13 +23,9 @@ jobs:
         python -m pip install --upgrade pip
         pwd
         ls -lrt
-        cd ..
-        pwd
+        cd Delestage
         ls -lrt
-        cd ..
-        ls -lrt
-        pwd
-        pip install -r Delestage/requirements.txt
+        pip install -r requirements.txt
 
   deploy:
     runs-on: ubuntu-latest

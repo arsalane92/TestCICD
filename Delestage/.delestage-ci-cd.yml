@@ -1,0 +1,12 @@
+stage:
+  - test
+run_tests:
+  runs-on: ubuntu-latest
+  stage: test
+  before_script:
+    - apt-get update && apt-get install pip
+    - pip install black
+    - pip install flake8
+  script:
+    - black *.py
+    - flake8 *.py

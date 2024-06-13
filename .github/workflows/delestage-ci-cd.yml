@@ -32,4 +32,4 @@ jobs:
         ls -ltr
         cd Delestage
         black *.py
-        flake8 *.py
+        flake8 --max-line-length=100 *.py

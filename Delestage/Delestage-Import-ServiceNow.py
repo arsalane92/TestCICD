@@ -98,7 +98,7 @@ def insert_data(conn, data, insertion_errors):
         with conn.cursor() as cursor:
             insert_query = sql.SQL("""
                 INSERT INTO cp_insee_delestage (cp, ci, heure_debut, heure_fin, 
-                date_heure_maj) VALUES (%s, %s, %s, %s, now()) """)
+                date_heure_maj) VALUES (%s, %s, %s, %s, now())""")
             cursor.execute(insert_query, (cp, ci, heure_debut, heure_fin))
         conn.commit()
         logging.info(f"Inserted data: {data}")

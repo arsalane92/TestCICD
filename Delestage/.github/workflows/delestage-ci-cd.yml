@@ -15,5 +15,6 @@ run_tests:
     - pip install black
     - pip install flake8
   script:
+    - cd Delestage
     - black *.py
     - flake8 *.py

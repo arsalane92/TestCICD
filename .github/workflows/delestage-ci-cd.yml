@@ -28,6 +28,7 @@ jobs:
         pip install black
         pip install flake8
     - name: Test Appli
+      run: |
         ls -ltr
         cd Delestage
         black *.py

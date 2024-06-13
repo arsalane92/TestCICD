@@ -251,4 +251,97 @@ def main():
                     logging.info(len(successful_insertions))
                     logging.info(len(insertion_errors))
                     logging.info(skipped_lines_count)
-                   
+                    total_records_count = (
+                        len(successful_insertions) + len(insertion_errors) + skipped_lines_count
+                    )
+
+                    report_content = (
+                        f"Individual Report for File: {filename_without_datetime}\n"
+                        f"Total records in the CSV file: {total_records_count}\n"
+                        f"Successful insertions: {len(successful_insertions)}\n"
+                        "Successful insertions details:\n"
+                        f"{successful_insertions}\n"
+                        f"Skipped insertions: {skipped_lines_count}\n"
+                        "Skipped lines details:\n"
+                        f"{skipped_lines_details}\n"
+                        f"Insertions in error: {len(insertion_errors)}\n\n"
+                    )
+
+                    if insertion_errors:
+                        report_content += "Errors details:\n"
+                        for error_record in insertion_errors:
+                            report_content += (
+                                f"CP: {error_record['cp']}, CI: {error_record['ci']}, "
+                                f"Error: {error_record['error_message']}\n"
+                            )
+
+                    summary_report_file.write(report_content)
+                    summary_report_file.write("-" * 50 + "\n")
+
+                    archive_directory = 'archive'
+                    if not os.path.exists(archive_directory):
+                        os.makedirs(archive_directory)
+
+                    if len(successful_insertions) < 1:
+                        archive_subdirectory = 'KO'
+                        status = "KO"
+                    elif insertion_errors or skipped_lines_count > 0:
+                        archive_subdirectory = 'PARTIAL_KO'
+                        status = "PARTIAL KO"
+                    else:
+                        archive_subdirectory = 'OK'
+                        status = "OK"
+
+                    archive_subdirectory_path = os.path.join(archive_directory, archive_subdirectory)
+                    if not os.path.exists(archive_subdirectory_path):
+                        os.makedirs(archive_subdirectory_path)
+
+                    archive_filename = os.path.join(
+                        archive_subdirectory_path,
+                        os.path.basename(latest_file)
+                    )
+                    shutil.move(latest_file, archive_filename)
+                    logging.info(f"Moved '{latest_file}' to '{archive_filename}'")
+
+                logging.info(f"Summary report generated and saved to {summary_report_path}")
+
+                if not insertion_errors and skipped_lines:
+                    logging.info(
+                        f"Ticket {dynamic_id} status updated to 'Waiting for Customer Feedback' "
+                        "due to skipped lines."
+                    )
+                elif not insertion_errors:
+                    logging.info(f"Ticket {dynamic_id} closed successfully.")
+
+    except Exception as e:
+        logging.error(f"Error generating summary report: {str(e)}")
+        print(f"An error occurred: {str(e)}")
+
+        dynamic_id = os.path.splitext(os.path.basename(latest_file))[0].split('_')[0]
+        summary_report_filename = f"{dynamic_id}_summary_report.csv"
+        summary_report_path = os.path.join(summary_report_directory, summary_report_filename)
+        # close_ticket_on_servicenow(dynamic_id, summary_report_path)
+
+    finally:
+        end_time = datetime.now()
+        duration = end_time - start_time
+
+        with open(summary_report_path, "a") as summary_report_file:
+            dynamic_id = os.path.splitext(os.path.basename(latest_file))[0].split('_')[0]
+            summary_report_file.write(
+                f"!!!!!!!!!!!!!!!!Final Status: {status} !!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+                f"Execution Start Time: {start_time}\n"
+                f"Execution End Time: {end_time}\n"
+                f"Duration: {duration}\n"
+            )
+
+        logging.info(f"Summary report generated and saved to {summary_report_path}")
+        close_ticket_on_servicenow(dynamic_id, summary_report_path)
+        if conn1:
+            conn1.close()
+        if conn2:
+            conn2.close()
+
+
+if __name__ == "__main__":
+    main()

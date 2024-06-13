@@ -99,8 +99,8 @@ def insert_data(conn, data, insertion_errors):
     try:
         with conn.cursor() as cursor:
             insert_query = sql.SQL("""
-                INSERT INTO cp_insee_delestage (cp, ci, heure_debut, heure_fin, date_heure_maj)
-                VALUES (%s, %s, %s, %s, now())
+                INSERT INTO cp_insee_delestage (cp, ci, heure_debut, heure_fin, 
+                date_heure_maj) VALUES (%s, %s, %s, %s, now())
             """)
             cursor.execute(insert_query, (cp, ci, heure_debut, heure_fin))
         conn.commit()
@@ -179,7 +179,9 @@ def main():
             summary_report_filename = f"{dynamic_id}_summary_report.csv"
             log_filename = f"{dynamic_id}_script.log"
             log_file_path = os.path.join(log_directory, log_filename)
-            summary_report_path = os.path.join(summary_report_directory, summary_report_filename)
+            summary_report_path = os.path.join(
+                summary_report_directory, summary_report_filename
+            )
             logging.basicConfig(
                 filename=log_file_path,
                 level=logging.INFO,
@@ -189,7 +191,9 @@ def main():
             with open(summary_report_path, "w") as summary_report_file:
                 summary_report_file.write(f"Summary Report for {today_date}\n\n")
 
-                filename_without_datetime = re.sub(r'\d{8}_\d{6}_', '', latest_file)
+                filename_without_datetime = re.sub(
+                    r'\d{8}_\d{6}_', '', latest_file
+                )
 
                 logging.info(f"Processing file: {latest_file}")
 
@@ -215,7 +219,7 @@ def main():
                     total_inserts = 0
                     for row in csvreader:
                         total_inserts += 1
-                        cp, ci = format_cp_ci(row['cp'], row['ci'])  # Format CP and CI to have a length of 5 digits
+                        cp, ci = format_cp_ci(row['cp'], row['ci'])
                         heure_debut = convert_timestamp(row['heure_debut'])
                         heure_fin = convert_timestamp(row['heure_fin'])
 
@@ -224,27 +228,37 @@ def main():
                             success_db1 = insert_data(conn1, data, insertion_errors)
                             if success_db1:
                                 successful_insertions.append(
-                                    f"CP: {cp}, CI: {ci}, Heure début: {heure_debut}, Heure fin: {heure_fin}"
+                                    f"CP: {cp}, CI: {ci}, Heure début: "
+                                    f"{heure_debut}, Heure fin: {heure_fin}"
                                 )
                                 if conn2:
                                     insert_data(conn2, data, insertion_errors)
                             else:
                                 skipped_lines.append(
-                                    f"CP: {cp}, CI: {ci}, Error: Error during insertion\n"
+                                    f"CP: {cp}, CI: {ci}, Error: Error during "
+                                    f"insertion\n"
                                 )
                                 insertion_errors.append(
-                                    {'cp': cp, 'ci': ci, 'error_message': 'Error during insertion'}
+                                    {'cp': cp, 'ci': ci,
+                                     'error_message': 'Error during insertion'}
                                 )
-                                logging.error("Insertion into db1 failed. Skipping insertion into db2.")
+                                logging.error(
+                                    "Insertion into db1 failed. Skipping insertion "
+                                    "into db2."
+                                )
 
                     skipped_lines_count = 0
-                    skipped_lines_file_path = f"{dynamic_id}_delestage-skipped-lines.csv"
+                    skipped_lines_file_path = (
+                        f"{dynamic_id}_delestage-skipped-lines.csv"
+                    )
                     if os.path.exists(skipped_lines_file_path):
                         with open(skipped_lines_file_path, 'r') as skipped_lines_file:
                             skipped_lines_count = sum(1 for line in skipped_lines_file) - 1
 
                     skipped_lines_details = ""
-                    skipped_lines_log_file_path = f"{dynamic_id}_skipped-lines.log"
+                    skipped_lines_log_file_path = (
+                        f"{dynamic_id}_skipped-lines.log"
+                    )
                     if os.path.exists(skipped_lines_log_file_path):
                         with open(skipped_lines_log_file_path, 'r') as skipped_lines_log_file:
                             skipped_lines_details = skipped_lines_log_file.read()
@@ -252,7 +266,9 @@ def main():
                     logging.info(len(insertion_errors))
                     logging.info(skipped_lines_count)
                     total_records_count = (
-                        len(successful_insertions) + len(insertion_errors) + skipped_lines_count
+                        len(successful_insertions) +
+                        len(insertion_errors) +
+                        skipped_lines_count
                     )
 
                     report_content = (
@@ -292,7 +308,9 @@ def main():
                         archive_subdirectory = 'OK'
                         status = "OK"
 
-                    archive_subdirectory_path = os.path.join(archive_directory, archive_subdirectory)
+                    archive_subdirectory_path = os.path.join(
+                        archive_directory, archive_subdirectory
+                    )
                     if not os.path.exists(archive_subdirectory_path):
                         os.makedirs(archive_subdirectory_path)
 
@@ -307,8 +325,8 @@ def main():
 
                 if not insertion_errors and skipped_lines:
                     logging.info(
-                        f"Ticket {dynamic_id} status updated to 'Waiting for Customer Feedback' "
-                        "due to skipped lines."
+                        f"Ticket {dynamic_id} status updated to "
+                        "'Waiting for Customer Feedback' due to skipped lines."
                     )
                 elif not insertion_errors:
                     logging.info(f"Ticket {dynamic_id} closed successfully.")
@@ -329,7 +347,8 @@ def main():
         with open(summary_report_path, "a") as summary_report_file:
             dynamic_id = os.path.splitext(os.path.basename(latest_file))[0].split('_')[0]
             summary_report_file.write(
-                f"!!!!!!!!!!!!!!!!Final Status: {status} !!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
+                f"!!!!!!!!!!!!!!!!Final Status: {status} "
+                "!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
                 f"Execution Start Time: {start_time}\n"
                 f"Execution End Time: {end_time}\n"
                 f"Duration: {duration}\n"

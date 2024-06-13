@@ -36,6 +36,7 @@ jobs:
     steps:
     - name: run_tests
       run: |
+        ls -ltr
         cd Delestage
         black *.py
         flake8 *.py

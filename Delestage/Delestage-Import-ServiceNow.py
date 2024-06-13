@@ -1,19 +1,22 @@
 import csv
-import psycopg2
 import logging
 import os
 import shutil
 import glob
 import re
-from psycopg2 import sql
-from datetime import datetime
-#import requests
 import smtplib
+from datetime import datetime
 from email.message import EmailMessage
 import configparser
+import psycopg2
+from psycopg2 import sql
 
 # Set up logging configuration
-logging.basicConfig(handlers=[logging.StreamHandler()], level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    handlers=[logging.StreamHandler()],
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 # Set up summary report configuration
 summary_report_directory = 'summary_reports'
@@ -50,8 +53,9 @@ if config.getint('General', 'num_databases') == 2:
 else:
     db2_params = None  # Set db2_params to None if there's only one database
 
-# Function to connect to the database
+
 def connect_to_db(db_params):
+    """Connect to the database."""
     try:
         conn = psycopg2.connect(**db_params)
         return conn
@@ -59,7 +63,9 @@ def connect_to_db(db_params):
         logging.error(f"Error connecting to the database: {e}")
         return None
 
+
 def convert_timestamp(timestamp_str):
+    """Convert timestamp string to a different format."""
     try:
         timestamp = datetime.strptime(timestamp_str, '%d/%m/%Y %H:%M')
         return timestamp.strftime('%Y-%m-%d %H:%M:%S')
@@ -67,29 +73,30 @@ def convert_timestamp(timestamp_str):
         logging.error(f"Invalid timestamp format: {timestamp_str}")
         return None
 
+
 def format_cp_ci(cp, ci):
+    """Format CP and CI to have a length of 5 digits."""
     cp = cp.zfill(5)
     ci = ci.zfill(5)
     return cp, ci
 
-# Function to delete all rows from the table
+
 def delete_all_rows(conn):
+    """Delete all rows from the table."""
     try:
         with conn.cursor() as cursor:
-            delete_query = sql.SQL("""
-                DELETE FROM cp_insee_delestage
-            """)
+            delete_query = sql.SQL("DELETE FROM cp_insee_delestage")
             cursor.execute(delete_query)
         conn.commit()
         logging.info("All rows deleted from cp_insee_delestage table.")
     except psycopg2.Error as e:
         logging.error(f"Error deleting rows from the table: {e}")
 
-# Function to insert data into the database if the couple CI/CP does not exist
+
 def insert_data(conn, data, insertion_errors):
+    """Insert data into the database if the couple CI/CP does not exist."""
     cp, ci, heure_debut, heure_fin = data
     try:
-        #if not check_existing_data(conn, cp, ci):
         with conn.cursor() as cursor:
             insert_query = sql.SQL("""
                 INSERT INTO cp_insee_delestage (cp, ci, heure_debut, heure_fin, date_heure_maj)
@@ -99,18 +106,19 @@ def insert_data(conn, data, insertion_errors):
         conn.commit()
         logging.info(f"Inserted data: {data}")
         return True
-        #else:
-        #    logging.info(f"Data with CP: {cp} and CI: {ci} already exists. Skipping insertion.")
-        #    return False
     except psycopg2.Error as e:
         logging.error(f"Error inserting data into the database: {e}")
         insertion_errors.append({'cp': cp, 'ci': ci, 'error_message': str(e)})
         return False
 
-# Function to close the ticket on ServiceNow and add a comment
+
 def close_ticket_on_servicenow(dynamic_id, summary_report_path):
-    # ServiceNow API endpoint for closing tickets
-    servicenow_api_url = f"https://odigodev.service-now.com/api/now/table/sc_req_item/{dynamic_id}"
+    """Close the ticket on ServiceNow and add a comment."""
+    import requests
+
+    servicenow_api_url = (
+        f"https://odigodev.service-now.com/api/now/table/sc_req_item/{dynamic_id}"
+    )
 
     headers = {
         "Accept": "application/json",
@@ -119,25 +127,32 @@ def close_ticket_on_servicenow(dynamic_id, summary_report_path):
 
     with open(summary_report_path, "r") as summary_report_file:
         comment_text = summary_report_file.read()
-        print(comment_text)
+
     data = {
-        "state": "6" ,
+        "state": "6",
         "comments": comment_text,
     }
 
-    response = requests.put(servicenow_api_url,
-                            auth=(SERVICE_NOW_USERNAME, SERVICE_NOW_PASSWORD),
-                            headers=headers,
-                            json=data)
+    response = requests.put(
+        servicenow_api_url,
+        auth=(SERVICE_NOW_USERNAME, SERVICE_NOW_PASSWORD),
+        headers=headers,
+        json=data
+    )
 
     if response.status_code == 200:
         logging.info(f"Ticket {dynamic_id} closed successfully on ServiceNow.")
         return True
     else:
-        logging.error(f"Failed to close ticket {dynamic_id} on ServiceNow. Status code: {response.status_code}, Response: {response.text}")
+        logging.error(
+            f"Failed to close ticket {dynamic_id} on ServiceNow. "
+            f"Status code: {response.status_code}, Response: {response.text}"
+        )
         return False
 
+
 def main():
+    """Main function to execute the script."""
     start_time = datetime.now()
     log_directory = 'logs'
     summary_report_directory = 'summary_reports'
@@ -165,7 +180,11 @@ def main():
             log_filename = f"{dynamic_id}_script.log"
             log_file_path = os.path.join(log_directory, log_filename)
             summary_report_path = os.path.join(summary_report_directory, summary_report_filename)
-            logging.basicConfig(filename=log_file_path, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+            logging.basicConfig(
+                filename=log_file_path,
+                level=logging.INFO,
+                format='%(asctime)s - %(levelname)s - %(message)s'
+            )
 
             with open(summary_report_path, "w") as summary_report_file:
                 summary_report_file.write(f"Summary Report for {today_date}\n\n")
@@ -196,21 +215,26 @@ def main():
                     total_inserts = 0
                     for row in csvreader:
                         total_inserts += 1
-                        cp, ci, heure_debut, heure_fin = row['cp'], row['ci'], row['heure_debut'], row['heure_fin']
-                        cp, ci = format_cp_ci(cp, ci)  # Format CP and CI to have a length of 5 digits
-                        heure_debut = convert_timestamp(heure_debut)
-                        heure_fin = convert_timestamp(heure_fin)
+                        cp, ci = format_cp_ci(row['cp'], row['ci'])  # Format CP and CI to have a length of 5 digits
+                        heure_debut = convert_timestamp(row['heure_debut'])
+                        heure_fin = convert_timestamp(row['heure_fin'])
 
                         if heure_debut is not None and heure_fin is not None:
                             data = (cp, ci, heure_debut, heure_fin)
                             success_db1 = insert_data(conn1, data, insertion_errors)
                             if success_db1:
-                                successful_insertions.append(f"CP: {cp}, CI: {ci}, Heure début: {heure_debut}, Heure fin: {heure_fin}")
-
-                                success_db2 = insert_data(conn2, data, insertion_errors) if conn2 else False
+                                successful_insertions.append(
+                                    f"CP: {cp}, CI: {ci}, Heure début: {heure_debut}, Heure fin: {heure_fin}"
+                                )
+                                if conn2:
+                                    insert_data(conn2, data, insertion_errors)
                             else:
-                                skipped_lines.append(f"CP: {cp}, CI: {ci}, Error: Error during insertion\n")
-                                insertion_errors.append({'cp': cp, 'ci': ci, 'error_message': 'Error during insertion'})
+                                skipped_lines.append(
+                                    f"CP: {cp}, CI: {ci}, Error: Error during insertion\n"
+                                )
+                                insertion_errors.append(
+                                    {'cp': cp, 'ci': ci, 'error_message': 'Error during insertion'}
+                                )
                                 logging.error("Insertion into db1 failed. Skipping insertion into db2.")
 
                     skipped_lines_count = 0
@@ -227,83 +251,4 @@ def main():
                     logging.info(len(successful_insertions))
                     logging.info(len(insertion_errors))
                     logging.info(skipped_lines_count)
-                    total_records_count = len(successful_insertions) + len(insertion_errors) + skipped_lines_count
-
-                    report_content = f"Individual Report for File: {filename_without_datetime}\n"
-                    report_content += f"Total records in the CSV file: {total_records_count}\n"
-                    report_content += f"Successful insertions: {len(successful_insertions)}\n"
-                    report_content += "Successful insertions details:\n"
-                    report_content += "\n".join(successful_insertions) + "\n"
-                    report_content += f"Skipped insertions: {skipped_lines_count}\n"
-                    report_content += "Skipped lines details:\n"
-                    report_content += skipped_lines_details + "\n"
-                    report_content += f"Insertions in error: {len(insertion_errors)}\n\n"
-
-                    if insertion_errors:
-                        report_content += "Errors details:\n"
-                        for error_record in insertion_errors:
-                            report_content += f"CP: {error_record['cp']}, CI: {error_record['ci']}, Error: {error_record['error_message']}\n"
-
-                    summary_report_file.write(report_content)
-                    summary_report_file.write("-" * 50 + "\n")
-
-                    archive_directory = 'archive'
-                    if not os.path.exists(archive_directory):
-                        os.makedirs(archive_directory)
-
-                    if len(successful_insertions) < 1:
-                        archive_subdirectory = 'KO'
-                        status = "KO"
-                    elif insertion_errors or skipped_lines_count > 0:
-                        archive_subdirectory = 'PARTIAL_KO'
-                        status = "PARTIAL KO"
-                    else:
-                        archive_subdirectory = 'OK'
-                        status = "OK"
-
-                    archive_subdirectory_path = os.path.join(archive_directory, archive_subdirectory)
-                    if not os.path.exists(archive_subdirectory_path):
-                        os.makedirs(archive_subdirectory_path)
-
-                    archive_filename = os.path.join(archive_subdirectory_path, os.path.basename(latest_file))
-                    shutil.move(latest_file, archive_filename)
-                    logging.info(f"Moved '{latest_file}' to '{archive_filename}'")
-
-                logging.info(f"Summary report generated and saved to {summary_report_path}")
-
-                if not insertion_errors and skipped_lines:
-                    logging.info(f"Ticket {dynamic_id} status updated to 'Waiting for Customer Feedback' due to skipped lines.")
-                elif not insertion_errors:
-                    logging.info(f"Ticket {dynamic_id} closed successfully.")
-
-    except Exception as e:
-        logging.error(f"Error generating summary report: {str(e)}")
-        print(f"An error occurred: {str(e)}")
-
-        dynamic_id = os.path.splitext(os.path.basename(latest_file))[0].split('_')[0]
-        summary_report_filename = f"{dynamic_id}_summary_report.csv"
-        summary_report_path = os.path.join(summary_report_directory, summary_report_filename)
-        #close_ticket_on_servicenow(dynamic_id, summary_report_path)
-
-    finally:
-        end_time = datetime.now()
-        duration = end_time - start_time
-
-        with open(summary_report_path, "a") as summary_report_file:
-            dynamic_id = os.path.splitext(os.path.basename(latest_file))[0].split('_')[0]
-            summary_report_file.write(f"!!!!!!!!!!!!!!!!Final Status: {status} !!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
-            summary_report_file.write(f"Execution Start Time: {start_time}\n")
-            summary_report_file.write(f"Execution End Time: {end_time}\n")
-            summary_report_file.write(f"Duration: {duration}\n")
-            
-        logging.info(f"Summary report generated and saved to {summary_report_path}")
-        close_ticket_on_servicenow(dynamic_id, summary_report_path)
-        if conn1:
-            conn1.close()
-        if conn2:
-            conn2.close()
-
-
-if __name__ == "__main__":
-    main()
-
+                   

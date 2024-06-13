@@ -3,7 +3,7 @@ import logging
 import os
 import glob
 import re
-import smtplib
+import shutil
 from datetime import datetime
 import configparser
 import psycopg2

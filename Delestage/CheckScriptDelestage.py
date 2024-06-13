@@ -10,7 +10,11 @@ from datetime import datetime
 # Set up logging with the current date and time in the log file name
 current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 log_filename = f'Precheck-Script_{current_datetime}.log'
-logging.basicConfig(handlers=[logging.FileHandler(log_filename), logging.StreamHandler()], level=logging.INFO, format='%(asctime)s - %(levelname)s: %(message)s')
+logging.basicConfig(
+    handlers=[logging.FileHandler(log_filename), logging.StreamHandler()],
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s: %(message)s'
+)
 
 # Read configuration from config.ini file
 config = configparser.ConfigParser()
@@ -34,10 +38,14 @@ def check_db_connections(db_params):
     try:
         # Check connection for the specified database
         db_connection = psycopg2.connect(**db_params)
-        logging.info(f"Database connection successful for {db_params['database']}!")
+        logging.info(
+            f"Database connection successful for {db_params['database']}!"
+        )
         db_connection.close()
     except psycopg2.Error as e:
-        logging.error(f"Error: Unable to connect to the database {db_params['database']}.")
+        logging.error(
+            f"Error: Unable to connect to the database {db_params['database']}."
+        )
         logging.error(e)
 
 # Get the number of databases from config.ini
@@ -105,7 +113,7 @@ if matching_files:
         valid_lines = []
         skipped_lines = []
         skipped_lines_log = []  # List to store skipped line descriptions
-        snow_id = os.path.splitext(os.path.basename(file_path))[0].split('_')[0]  
+        snow_id = os.path.splitext(os.path.basename(file_path))[0].split('_')[0]
         skipped_lines_filename = f'{snow_id}_delestage-skipped-lines.csv'
         skipped_lines_log_filename = f'{snow_id}_skipped-lines.log'
         
@@ -119,21 +127,33 @@ if matching_files:
                         if len(fields) >= 6:
                             depart, commune, cp, ci, heure_debut, heure_fin = fields
                             try:
-                                datetime.strptime(heure_debut, '%d/%m/%Y %H:%M')
+                                datetime.strptime(
+                                    heure_debut, '%d/%m/%Y %H:%M'
+                                )
                                 datetime.strptime(heure_fin, '%d/%m/%Y %H:%M')
                                 if cp and ci:
                                     valid_lines.append(line)
                                 else:
                                     skipped_lines.append(line)
-                                    description = f"Skipped due to missing mandatory fields - CP: {cp or '[CP]'}, CI: {ci or '[CI]'}, Heure Debut: {heure_debut or '[Heure Debut]'}, Heure Fin: {heure_fin or '[Heure Fin]'}"
+                                    description = (
+                                        f"Skipped due to missing mandatory fields - "
+                                        f"CP: {cp or '[CP]'}, CI: {ci or '[CI]'}, "
+                                        f"Heure Debut: {heure_debut or '[Heure Debut]'}, "
+                                        f"Heure Fin: {heure_fin or '[Heure Fin]'}"
+                                    )
                                     skipped_lines_log.append(description)
                             except ValueError:
                                 skipped_lines.append(line)
-                                description = f"Skipped due to invalid date-time format - Heure Debut: {heure_debut}, Heure Fin: {heure_fin}"
+                                description = (
+                                    f"Skipped due to invalid date-time format - "
+                                    f"Heure Debut: {heure_debut}, Heure Fin: {heure_fin}"
+                                )
                                 skipped_lines_log.append(description)
                         else:
                             skipped_lines.append(line)
-                            description = f"Skipped due to insufficient fields - {line}"
+                            description = (
+                                f"Skipped due to insufficient fields - {line}"
+                            )
                             skipped_lines_log.append(description)
                 else:
                     logging.error("Error: Invalid file format.")
@@ -154,13 +174,23 @@ if matching_files:
         
         if python_command:
             try:
-                subprocess.run([python_command, "Delestage-Import-ServiceNow.py"], check=True)
-                logging.info("Delestage-Import-ServiceNow.py script executed successfully.")
+                subprocess.run(
+                    [python_command, "Delestage-Import-ServiceNow.py"],
+                    check=True
+                )
+                logging.info(
+                    "Delestage-Import-ServiceNow.py script executed successfully."
+                )
             except Exception as import_error:
-                logging.error("Error: Unable to execute Delestage-Import-ServiceNow.py script.")
+                logging.error(
+                    "Error: Unable to execute Delestage-Import-ServiceNow.py script."
+                )
                 logging.error(import_error)
         else:
-            logging.error("Error: Python or Python3 is not available. Cannot execute Delestage-Import-ServiceNow.py.")
+            logging.error(
+                "Error: Python or Python3 is not available. "
+                "Cannot execute Delestage-Import-ServiceNow.py."
+            )
 else:
     logging.info("No matching files found in the specified directory.")
 logging.info(f"Elapsed time: {elapsed_time:.2f} seconds")

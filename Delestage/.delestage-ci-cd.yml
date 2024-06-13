@@ -1,3 +1,10 @@
+name: CI/CD delestage
+
+on:
+  push:
+    branches:
+      - main
+      
 stage:
   - test
 run_tests:

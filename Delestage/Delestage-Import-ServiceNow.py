@@ -1,12 +1,10 @@
 import csv
 import logging
 import os
-import shutil
 import glob
 import re
 import smtplib
 from datetime import datetime
-from email.message import EmailMessage
 import configparser
 import psycopg2
 from psycopg2 import sql
@@ -260,7 +258,7 @@ def main():
                         f"{dynamic_id}_skipped-lines.log"
                     )
                     if os.path.exists(skipped_lines_log_file_path):
-                        with open(skipped_lines_log_file_path, 'r') as skipped_lines_log_file:
+                        with open(skipped_lines_log_file, 'r') as skipped_lines_log_file:
                             skipped_lines_details = skipped_lines_log_file.read()
                     logging.info(len(successful_insertions))
                     logging.info(len(insertion_errors))

@@ -27,17 +27,7 @@ jobs:
         pip install -r requirements.txt
         pip install black
         pip install flake8
-        
-
-  test:
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-    - name: run_tests
-      run: |
+    - name: Test Appli
         ls -ltr
         cd Delestage
         black *.py
